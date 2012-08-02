@@ -28,251 +28,251 @@ using System;
 
 
 public class Parser {
-	const int _EOF = 0;
-	const int _ident = 1;
-	const int _terminal = 2;
-	const int _wrap = 3;
-	const int maxT = 13;
+    const int _EOF = 0;
+    const int _ident = 1;
+    const int _terminal = 2;
+    const int _wrap = 3;
+    const int maxT = 13;
 
-	const bool T = true;
-	const bool x = false;
-	const int minErrDist = 2;
+    const bool T = true;
+    const bool x = false;
+    const int minErrDist = 2;
 
-	public static Token t;    // last recognized token
-	public static Token la;   // lookahead token
-	static int errDist = minErrDist;
-
-
-
-	static void SynErr (int n) {
-		if (errDist >= minErrDist) Errors.SynErr(la.line, la.col, n);
-		errDist = 0;
-	}
-
-	public static void SemErr (string msg) {
-		if (errDist >= minErrDist) Errors.Error(t.line, t.col, msg);
-		errDist = 0;
-	}
-	
-	static void Get () {
-		for (;;) {
-			t = la;
-			la = Scanner.Scan();
-			if (la.kind <= maxT) { ++errDist; break; }
-
-			la = t;
-		}
-	}
-	
-	static void Expect (int n) {
-		if (la.kind==n) Get(); else { SynErr(n); }
-	}
-	
-	static bool StartOf (int s) {
-		return set[s, la.kind];
-	}
-	
-	static void ExpectWeak (int n, int follow) {
-		if (la.kind == n) Get();
-		else {
-			SynErr(n);
-			while (!StartOf(follow)) Get();
-		}
-	}
-	
-	static bool WeakSeparator (int n, int syFol, int repFol) {
-		bool[] s = new bool[maxT+1];
-		if (la.kind == n) { Get(); return true; }
-		else if (StartOf(repFol)) return false;
-		else {
-			for (int i=0; i <= maxT; i++) {
-				s[i] = set[syFol, i] || set[repFol, i] || set[0, i];
-			}
-			SynErr(n);
-			while (!s[la.kind]) Get();
-			return StartOf(syFol);
-		}
-	}
-	
-	static void EBNF() {
-		Rule();
-		while (la.kind == 1) {
-			Rule();
-		}
-	}
-
-	static void Rule() {
-		Expect(1);
-		Node n;
-		Symbol s=Symbol.Find(t.val);	//look if already known
-		
-						if(s==null) n=new Node(new Symbol(Node.nt,t.val));
-						else {
-							if(s.typ==Node.nt) {
-								String message="ERROR: Nonterminal symbol "+t.val+" has been defined multiple times.";
-								EbnfForm.WriteLine(message);
-								n=new Node(new Symbol(0,"BUG"));
-							} else { //if only considered as terminal symbol until now
-								s.typ=Node.nt;
-								Symbol.terminalToNt(s.name);
-								Symbol.terminalToNt(s.name);
-								Node.terminalToNt(s.name);
-								n=Node.Find(s.name);	
-							}
-						}
-					 
-		Expect(4);
-		Expr(out n.sym.graph);
-		Expect(5);
-		Graph.Finish(n.sym.graph); 
-	}
-
-	static void Expr(out Graph g) {
-		Graph g1; 
-		Alt(out g);
-		bool first = true; 	
-		while (la.kind == 6) {
-			Get();
-			Alt(out g1);
-			if (first) { Graph.MakeFirstAlt(g); first = false; }
-			Graph.MakeAlternative(g, g1); 
-			 
-		}
-	}
-
-	static void Alt(out Graph g) {
-		Graph g1; g=new Graph();  
-		while (StartOf(1)) {
-			Sym(out g1);
-			Graph.MakeSequence(g, g1); 	
-		}
-		if(g.l==null && g.r==null)
-		g=new Graph(new Node(Node.eps,null));
-		
-	}
-
-	static void Sym(out Graph g) {
-		Graph g1;g=new Graph();	 
-		switch (la.kind) {
-		case 1: {
-			Get();
-			Symbol s=Symbol.Find(t.val);
-			Node n;
-			if(s!=null)	n= new Node(s);
-			else n=new Node(new Symbol(Node.t,t.val)); //type could be nt, but not known yet
-			g=new Graph(n);				
-			
-			break;
-		}
-		case 2: {
-			Get();
-			char[] trim=new char[1];
-			trim[0]=t.val[0];
-			String temp=t.val.Trim(trim);
-			
-			Node n =new Node(new Symbol(Node.t,temp));
-			g=new Graph(n);				
-			
-			break;
-		}
-		case 3: {
-			Get();
-			Node n =new Node(Node.wrap,null);
-			g=new Graph(n);
-			
-			break;
-		}
-		case 7: {
-			Get();
-			Expr(out g1);
-			Expect(8);
-			g=g1;  
-			break;
-		}
-		case 9: {
-			Get();
-			Expr(out g1);
-			Expect(10);
-			Graph.MakeOption(g1);
-			g=g1;
-			
-			break;
-		}
-		case 11: {
-			Get();
-			Expr(out g1);
-			Expect(12);
-			Graph.MakeIteration(g1);
-			g=g1;
-			
-			break;
-		}
-		default: SynErr(14); break;
-		}
-	}
+    public static Token t;    // last recognized token
+    public static Token la;   // lookahead token
+    static int errDist = minErrDist;
 
 
 
-	public static void Parse() {
-		la = new Token();
-		la.val = "";		
-		Get();
-		EBNF();
+    static void SynErr (int n) {
+        if (errDist >= minErrDist) Errors.SynErr(la.line, la.col, n);
+        errDist = 0;
+    }
+
+    public static void SemErr (string msg) {
+        if (errDist >= minErrDist) Errors.Error(t.line, t.col, msg);
+        errDist = 0;
+    }
+    
+    static void Get () {
+        for (;;) {
+            t = la;
+            la = Scanner.Scan();
+            if (la.kind <= maxT) { ++errDist; break; }
+
+            la = t;
+        }
+    }
+    
+    static void Expect (int n) {
+        if (la.kind==n) Get(); else { SynErr(n); }
+    }
+    
+    static bool StartOf (int s) {
+        return set[s, la.kind];
+    }
+    
+    static void ExpectWeak (int n, int follow) {
+        if (la.kind == n) Get();
+        else {
+            SynErr(n);
+            while (!StartOf(follow)) Get();
+        }
+    }
+    
+    static bool WeakSeparator (int n, int syFol, int repFol) {
+        bool[] s = new bool[maxT+1];
+        if (la.kind == n) { Get(); return true; }
+        else if (StartOf(repFol)) return false;
+        else {
+            for (int i=0; i <= maxT; i++) {
+                s[i] = set[syFol, i] || set[repFol, i] || set[0, i];
+            }
+            SynErr(n);
+            while (!s[la.kind]) Get();
+            return StartOf(syFol);
+        }
+    }
+    
+    static void EBNF() {
+        Rule();
+        while (la.kind == 1) {
+            Rule();
+        }
+    }
+
+    static void Rule() {
+        Expect(1);
+        Node n;
+        Symbol s=Symbol.Find(t.val);	//look if already known
+        
+                        if(s==null) n=new Node(new Symbol(Node.nt,t.val));
+                        else {
+                            if(s.typ==Node.nt) {
+                                String message="ERROR: Nonterminal symbol "+t.val+" has been defined multiple times.";
+                                EbnfForm.WriteLine(message);
+                                n=new Node(new Symbol(0,"BUG"));
+                            } else { //if only considered as terminal symbol until now
+                                s.typ=Node.nt;
+                                Symbol.terminalToNt(s.name);
+                                Symbol.terminalToNt(s.name);
+                                Node.terminalToNt(s.name);
+                                n=Node.Find(s.name);	
+                            }
+                        }
+                     
+        Expect(4);
+        Expr(out n.sym.graph);
+        Expect(5);
+        Graph.Finish(n.sym.graph); 
+    }
+
+    static void Expr(out Graph g) {
+        Graph g1; 
+        Alt(out g);
+        bool first = true; 	
+        while (la.kind == 6) {
+            Get();
+            Alt(out g1);
+            if (first) { Graph.MakeFirstAlt(g); first = false; }
+            Graph.MakeAlternative(g, g1); 
+             
+        }
+    }
+
+    static void Alt(out Graph g) {
+        Graph g1; g=new Graph();  
+        while (StartOf(1)) {
+            Sym(out g1);
+            Graph.MakeSequence(g, g1); 	
+        }
+        if(g.l==null && g.r==null)
+        g=new Graph(new Node(Node.eps,null));
+        
+    }
+
+    static void Sym(out Graph g) {
+        Graph g1;g=new Graph();	 
+        switch (la.kind) {
+        case 1: {
+            Get();
+            Symbol s=Symbol.Find(t.val);
+            Node n;
+            if(s!=null)	n= new Node(s);
+            else n=new Node(new Symbol(Node.t,t.val)); //type could be nt, but not known yet
+            g=new Graph(n);				
+            
+            break;
+        }
+        case 2: {
+            Get();
+            char[] trim=new char[1];
+            trim[0]=t.val[0];
+            String temp=t.val.Trim(trim);
+            
+            Node n =new Node(new Symbol(Node.t,temp));
+            g=new Graph(n);				
+            
+            break;
+        }
+        case 3: {
+            Get();
+            Node n =new Node(Node.wrap,null);
+            g=new Graph(n);
+            
+            break;
+        }
+        case 7: {
+            Get();
+            Expr(out g1);
+            Expect(8);
+            g=g1;  
+            break;
+        }
+        case 9: {
+            Get();
+            Expr(out g1);
+            Expect(10);
+            Graph.MakeOption(g1);
+            g=g1;
+            
+            break;
+        }
+        case 11: {
+            Get();
+            Expr(out g1);
+            Expect(12);
+            Graph.MakeIteration(g1);
+            g=g1;
+            
+            break;
+        }
+        default: SynErr(14); break;
+        }
+    }
+
+
+
+    public static void Parse() {
+        la = new Token();
+        la.val = "";		
+        Get();
+        EBNF();
 
     Expect(0);
-	}
+    }
 
-	static bool[,] set = {
-		{T,x,x,x, x,x,x,x, x,x,x,x, x,x,x},
-		{x,T,T,T, x,x,x,T, x,T,x,T, x,x,x}
+    static bool[,] set = {
+        {T,x,x,x, x,x,x,x, x,x,x,x, x,x,x},
+        {x,T,T,T, x,x,x,T, x,T,x,T, x,x,x}
 
-	};
+    };
 } // end Parser
 
 
 public class Errors {
-	public static int count = 0;                                    // number of errors detected
+    public static int count = 0;                                    // number of errors detected
   public static string errMsgFormat = "-- line {0} col {1}: {2}"; // 0=line, 1=column, 2=text
-	
-	public static void SynErr (int line, int col, int n) {
-		string s;
-		switch (n) {
-			case 0: s = "EOF expected"; break;
-			case 1: s = "ident expected"; break;
-			case 2: s = "terminal expected"; break;
-			case 3: s = "wrap expected"; break;
-			case 4: s = "\"=\" expected"; break;
-			case 5: s = "\".\" expected"; break;
-			case 6: s = "\"|\" expected"; break;
-			case 7: s = "\"(\" expected"; break;
-			case 8: s = "\")\" expected"; break;
-			case 9: s = "\"[\" expected"; break;
-			case 10: s = "\"]\" expected"; break;
-			case 11: s = "\"{\" expected"; break;
-			case 12: s = "\"}\" expected"; break;
-			case 13: s = "??? expected"; break;
-			case 14: s = "invalid Sym"; break;
+    
+    public static void SynErr (int line, int col, int n) {
+        string s;
+        switch (n) {
+            case 0: s = "EOF expected"; break;
+            case 1: s = "ident expected"; break;
+            case 2: s = "terminal expected"; break;
+            case 3: s = "wrap expected"; break;
+            case 4: s = "\"=\" expected"; break;
+            case 5: s = "\".\" expected"; break;
+            case 6: s = "\"|\" expected"; break;
+            case 7: s = "\"(\" expected"; break;
+            case 8: s = "\")\" expected"; break;
+            case 9: s = "\"[\" expected"; break;
+            case 10: s = "\"]\" expected"; break;
+            case 11: s = "\"{\" expected"; break;
+            case 12: s = "\"}\" expected"; break;
+            case 13: s = "??? expected"; break;
+            case 14: s = "invalid Sym"; break;
 
-			default: s = "error " + n; break;
-		}
-		Console.WriteLine(Errors.errMsgFormat, line, col, s);
-		EbnfForm.WriteLine("ERROR: Line: "+line+" Col: "+ col+": "+ s);
-		count++;
-	}
+            default: s = "error " + n; break;
+        }
+        Console.WriteLine(Errors.errMsgFormat, line, col, s);
+        EbnfForm.WriteLine("ERROR: Line: "+line+" Col: "+ col+": "+ s);
+        count++;
+    }
 
-	public static void SemErr (int line, int col, int n) {
-		Console.WriteLine(errMsgFormat, line, col, ("error " + n));
-		count++;
-	}
+    public static void SemErr (int line, int col, int n) {
+        Console.WriteLine(errMsgFormat, line, col, ("error " + n));
+        count++;
+    }
 
-	public static void Error (int line, int col, string s) {
-		Console.WriteLine(errMsgFormat, line, col, s);
-		count++;
-	}
+    public static void Error (int line, int col, string s) {
+        Console.WriteLine(errMsgFormat, line, col, s);
+        count++;
+    }
 
-	public static void Exception (string s) {
-		Console.WriteLine(s); 
-		System.Environment.Exit(1);
-	}
+    public static void Exception (string s) {
+        Console.WriteLine(s); 
+        System.Environment.Exit(1);
+    }
 } // Errors
 
